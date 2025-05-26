@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating-Point Format Calculator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a9eff;
+            margin-bottom: 30px;
+        }
+        
+        .format-section {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .format-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .format-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4a9eff;
+        }
+        
+        .format-info {
+            font-size: 14px;
+            color: #888;
+        }
+        
+        .bit-display {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .bit-group {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .bit {
+            width: 24px;
+            height: 30px;
+            border: 1px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .bit:hover {
+            background-color: #3a3a3a;
+            transform: scale(1.05);
+        }
+        
+        .bit.sign {
+            background-color: #ff4444;
+            color: white;
+        }
+        
+        .bit.exponent {
+            background-color: #44ff44;
+            color: black;
+        }
+        
+        .bit.mantissa {
+            background-color: #4444ff;
+            color: white;
+        }
+        
+        .bit-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        input[type="number"] {
+            width: 200px;
+            padding: 8px;
+            margin: 10px 0;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 5px rgba(74, 158, 255, 0.5);
+        }
+        
+        .hex-display {
+            font-family: monospace;
+            font-size: 16px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .value-display {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 4px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .value-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .value-label {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .value-content {
+            font-family: monospace;
+            font-size: 16px;
+            color: #e0e0e0;
+        }
+        
+        .special-value {
+            color: #ffa500;
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 0 5px;
+            background-color: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #3a8eef;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Floating-Point Format Calculator</h1>
+    
+    <div class="controls">
+        <input type="number" id="decimalInput" step="any" placeholder="Enter a number" value="3.14159">
+        <button onclick="updateAllFormats()">Calculate</button>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff4444;"></div>
+            <span>Sign</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #44ff44;"></div>
+            <span>Exponent</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #4444ff;"></div>
+            <span>Mantissa</span>
+        </div>
+    </div>
+    
+    <div id="formats"></div>
+    
+    <script>
+        const formats = [
+            { name: 'Float32', sign: 1, exponent: 8, mantissa: 23, bias: 127 },
+            { name: 'Float16', sign: 1, exponent: 5, mantissa: 10, bias: 15 },
+            { name: 'BFloat16', sign: 1, exponent: 8, mantissa: 7, bias: 127 },
+            { name: 'E5M2 (OCP MX)', sign: 1, exponent: 5, mantissa: 2, bias: 15 },
+            { name: 'E4M3 (OCP MX)', sign: 1, exponent: 4, mantissa: 3, bias: 7 },
+            { name: 'E3M2 (OCP MX)', sign: 1, exponent: 3, mantissa: 2, bias: 3 },
+            { name: 'E2M3 (OCP MX)', sign: 1, exponent: 2, mantissa: 3, bias: 1 },
+            { name: 'E2M1 (OCP MX FP4)', sign: 1, exponent: 2, mantissa: 1, bias: 1 },
+            { name: 'Float64', sign: 1, exponent: 11, mantissa: 52, bias: 1023 }
+        ];
+        
+        function hexToBits(hex, totalBits) {
+            // Remove 0x prefix if present
+            hex = hex.replace(/^0x/i, '');
+            
+            // Convert hex to binary string first
+            let binaryStr = '';
+            for (let i = 0; i < hex.length; i++) {
+                const nibble = parseInt(hex[i], 16);
+                if (isNaN(nibble)) return null;
+                binaryStr += nibble.toString(2).padStart(4, '0');
+            }
+            
+            // Pad or trim to exact bit count
+            if (binaryStr.length > totalBits) {
+                // Take the rightmost bits
+                binaryStr = binaryStr.slice(-totalBits);
+            } else {
+                // Pad with zeros on the left
+                binaryStr = binaryStr.padStart(totalBits, '0');
+            }
+            
+            // Convert to bit array
+            const bits = [];
+            for (let i = 0; i < totalBits; i++) {
+                bits.push(parseInt(binaryStr[i]));
+            }
+            
+            return bits;
+        }
+        
+        function updateFromHex(formatName, hexValue) {
+            const format = formats.find(f => f.name === formatName);
+            const totalBits = format.sign + format.exponent + format.mantissa;
+            
+            const bits = hexToBits(hexValue, totalBits);
+            if (bits === null) {
+                alert('Invalid hex value');
+                return;
+            }
+            
+            updateFormatDisplay(format, bits);
+            
+            // Update decimal input with the new value
+            const value = bitsToFloat(bits, format);
+            if (!(value && typeof value === 'object' && value.isNaN) && !isNaN(value) && isFinite(value)) {
+                document.getElementById('decimalInput').value = value;
+            }
+            
+            // Update hex input field to show normalized value
+            document.getElementById(format.name + '-hex-input').value = bitsToHex(bits);
+        }
+        
+        function floatToBits(value, format) {
+            const totalBits = format.sign + format.exponent + format.mantissa;
+            const bits = new Array(totalBits).fill(0);
+            
+            // Handle special cases
+            if (value === 0) {
+                return bits;
+            }
+            
+            // Special handling for OCP MX formats
+            if (format.name === 'E4M3 (OCP MX)') {
+                if (isNaN(value)) {
+                    // E4M3 OCP: NaN is encoded as all 1s in exponent and mantissa
+                    if (value < 0 || (typeof value === 'object' && value.signBit)) {
+                        bits[0] = 1;
+                    }
+                    // Set all exponent and mantissa bits to 1
+                    for (let i = format.sign; i < totalBits; i++) {
+                        bits[i] = 1;
+                    }
+                    return bits;
+                }
+                
+                // No infinity in E4M3 OCP - handle as normal number
+                if (!isFinite(value)) {
+                    // Convert infinity to maximum representable value
+                    value = value > 0 ? 448 : -448; // Max value for E4M3
+                }
+            } else if (format.name === 'E3M2 (OCP MX)' || format.name === 'E2M3 (OCP MX)' || format.name === 'E2M1 (OCP MX FP4)') {
+                // These OCP MX formats have no NaN or Infinity
+                if (isNaN(value) || !isFinite(value)) {
+                    // Saturate to max value based on format
+                    let maxVal;
+                    if (format.name === 'E3M2 (OCP MX)') {
+                        maxVal = 6; // Max for E3M2
+                    } else if (format.name === 'E2M3 (OCP MX)') {
+                        maxVal = 1.75; // Max for E2M3
+                    } else { // E2M1
+                        maxVal = 6; // Max for E2M1
+                    }
+                    value = (value < 0 || (isNaN(value) && bits[0])) ? -maxVal : maxVal;
+                }
+            } else {
+                // Standard handling for other formats
+                if (isNaN(value)) {
+                    // NaN: all exponent bits set to 1, non-zero mantissa
+                    for (let i = format.sign; i < format.sign + format.exponent; i++) {
+                        bits[i] = 1;
+                    }
+                    bits[format.sign + format.exponent] = 1;
+                    return bits;
+                }
+                
+                if (!isFinite(value)) {
+                    // Infinity: all exponent bits set to 1, zero mantissa
+                    if (value < 0) bits[0] = 1;
+                    for (let i = format.sign; i < format.sign + format.exponent; i++) {
+                        bits[i] = 1;
+                    }
+                    return bits;
+                }
+            }
+            
+            // Sign bit
+            if (value < 0) {
+                bits[0] = 1;
+                value = -value;
+            }
+            
+            // Calculate exponent and mantissa
+            let exponent = Math.floor(Math.log2(value));
+            let mantissa = value / Math.pow(2, exponent) - 1;
+            
+            // Biased exponent
+            let biasedExponent = exponent + format.bias;
+            
+            // Handle denormalized numbers
+            if (biasedExponent <= 0) {
+                biasedExponent = 0;
+                mantissa = value / Math.pow(2, 1 - format.bias);
+            }
+            
+            // Handle overflow
+            if (biasedExponent >= (1 << format.exponent) - 1) {
+                if (format.name === 'E4M3 (OCP MX)' || format.name === 'E3M2 (OCP MX)' || 
+                    format.name === 'E2M3 (OCP MX)' || format.name === 'E2M1 (OCP MX FP4)') {
+                    // OCP MX formats (except E5M2): No infinity, just use max exponent
+                    // But avoid the NaN encoding for E4M3
+                    biasedExponent = (1 << format.exponent) - 1;
+                    // Don't set all mantissa bits to 1 for E4M3
+                } else {
+                    // Other formats (including E5M2): set to infinity
+                    for (let i = format.sign; i < format.sign + format.exponent; i++) {
+                        bits[i] = 1;
+                    }
+                    return bits;
+                }
+            }
+            
+            // Set exponent bits
+            for (let i = 0; i < format.exponent; i++) {
+                bits[format.sign + format.exponent - 1 - i] = (biasedExponent >> i) & 1;
+            }
+            
+            // Set mantissa bits
+            for (let i = 0; i < format.mantissa; i++) {
+                mantissa *= 2;
+                if (mantissa >= 1) {
+                    bits[format.sign + format.exponent + i] = 1;
+                    mantissa -= 1;
+                }
+            }
+            
+            return bits;
+        }
+        
+        function bitsToFloat(bits, format) {
+            const signBit = bits[0];
+            let exponentBits = 0;
+            let mantissaBits = 0;
+            
+            // Extract exponent
+            for (let i = 0; i < format.exponent; i++) {
+                exponentBits = (exponentBits << 1) | bits[format.sign + i];
+            }
+            
+            // Extract mantissa - for Float64 we need to handle 52 bits carefully
+            if (format.mantissa <= 32) {
+                for (let i = 0; i < format.mantissa; i++) {
+                    mantissaBits = (mantissaBits << 1) | bits[format.sign + format.exponent + i];
+                }
+            } else {
+                // For Float64, use higher precision
+                mantissaBits = 0;
+                for (let i = 0; i < format.mantissa; i++) {
+                    mantissaBits = mantissaBits * 2 + bits[format.sign + format.exponent + i];
+                }
+            }
+            
+            // Special handling for OCP MX formats
+            if (format.name === 'E4M3 (OCP MX)') {
+                // Check for NaN: all exponent and mantissa bits are 1
+                if (exponentBits === (1 << format.exponent) - 1 && mantissaBits === (1 << format.mantissa) - 1) {
+                    return { isNaN: true, signBit: signBit, mantissaBits: mantissaBits, quietBit: 1 };
+                }
+                // No infinity in E4M3 OCP - all other values are normal/denormal numbers
+            } else if (format.name === 'E3M2 (OCP MX)' || format.name === 'E2M3 (OCP MX)' || format.name === 'E2M1 (OCP MX FP4)') {
+                // These formats have no special values - all bit patterns represent numbers
+            } else {
+                // Check for special values (standard formats)
+                if (exponentBits === (1 << format.exponent) - 1) {
+                    if (mantissaBits === 0) {
+                        return signBit ? -Infinity : Infinity;
+                    } else {
+                        // Return NaN with sign information preserved
+                        const quietBit = bits[format.sign + format.exponent]; // First mantissa bit
+                        return { isNaN: true, signBit: signBit, mantissaBits: mantissaBits, quietBit: quietBit };
+                    }
+                }
+            }
+            
+            // Calculate value
+            let value;
+            if (exponentBits === 0) {
+                // Denormalized
+                if (format.mantissa <= 32) {
+                    value = mantissaBits / Math.pow(2, format.mantissa) * Math.pow(2, 1 - format.bias);
+                } else {
+                    value = (mantissaBits / Math.pow(2, format.mantissa)) * Math.pow(2, 1 - format.bias);
+                }
+            } else {
+                // Normalized
+                if (format.mantissa <= 32) {
+                    value = (1 + mantissaBits / Math.pow(2, format.mantissa)) * Math.pow(2, exponentBits - format.bias);
+                } else {
+                    value = (1 + mantissaBits / Math.pow(2, format.mantissa)) * Math.pow(2, exponentBits - format.bias);
+                }
+            }
+            
+            return signBit ? -value : value;
+        }
+        
+        function bitsToHex(bits) {
+            let hex = '';
+            // Process from left to right, padding the last group if needed
+            for (let i = 0; i < bits.length; i += 4) {
+                let nibble = 0;
+                let bitsInNibble = Math.min(4, bits.length - i);
+                
+                // For the last group, if it's not complete, we need to left-align
+                if (bitsInNibble < 4 && i + bitsInNibble === bits.length) {
+                    // This is the last group and it's incomplete
+                    for (let j = 0; j < bitsInNibble; j++) {
+                        nibble = (nibble << 1) | bits[i + j];
+                    }
+                    // Shift left to align
+                    nibble = nibble << (4 - bitsInNibble);
+                } else {
+                    // Normal processing
+                    for (let j = 0; j < bitsInNibble; j++) {
+                        nibble = (nibble << 1) | bits[i + j];
+                    }
+                }
+                
+                hex += nibble.toString(16).toUpperCase();
+            }
+            
+            // For formats with bits not divisible by 4, we need to handle differently
+            if (bits.length % 4 !== 0) {
+                // Recalculate hex by treating bits as a single number
+                let value = 0;
+                for (let i = 0; i < bits.length; i++) {
+                    value = (value << 1) | bits[i];
+                }
+                hex = value.toString(16).toUpperCase();
+                // Pad with zeros to minimum length
+                const minHexLength = Math.ceil(bits.length / 4);
+                hex = hex.padStart(minHexLength, '0');
+            }
+            
+            return '0x' + hex;
+        }
+        
+        function createFormatDisplay(format) {
+            const section = document.createElement('div');
+            section.className = 'format-section';
+            section.id = format.name;
+            
+            const header = document.createElement('div');
+            header.className = 'format-header';
+            header.innerHTML = `
+                <div class="format-name">${format.name}</div>
+                <div class="format-info">
+                    ${format.sign} bit sign | ${format.exponent} bits exponent | ${format.mantissa} bits mantissa
+                </div>
+            `;
+            section.appendChild(header);
+            
+            const bitDisplay = document.createElement('div');
+            bitDisplay.className = 'bit-display';
+            
+            // Sign bit
+            const signGroup = document.createElement('div');
+            signGroup.className = 'bit-group';
+            const signBit = document.createElement('div');
+            signBit.className = 'bit sign';
+            signBit.textContent = '0';
+            signBit.onclick = () => toggleBit(format.name, 0);
+            signGroup.appendChild(signBit);
+            bitDisplay.appendChild(signGroup);
+            
+            // Exponent bits
+            const expGroup = document.createElement('div');
+            expGroup.className = 'bit-group';
+            for (let i = 0; i < format.exponent; i++) {
+                const bit = document.createElement('div');
+                bit.className = 'bit exponent';
+                bit.textContent = '0';
+                bit.onclick = () => toggleBit(format.name, format.sign + i);
+                expGroup.appendChild(bit);
+            }
+            bitDisplay.appendChild(expGroup);
+            
+            // Mantissa bits
+            const mantGroup = document.createElement('div');
+            mantGroup.className = 'bit-group';
+            for (let i = 0; i < format.mantissa; i++) {
+                const bit = document.createElement('div');
+                bit.className = 'bit mantissa';
+                bit.textContent = '0';
+                bit.onclick = () => toggleBit(format.name, format.sign + format.exponent + i);
+                mantGroup.appendChild(bit);
+            }
+            bitDisplay.appendChild(mantGroup);
+            
+            section.appendChild(bitDisplay);
+            
+            const hexContainer = document.createElement('div');
+            hexContainer.style.display = 'flex';
+            hexContainer.style.alignItems = 'center';
+            hexContainer.style.gap = '10px';
+            
+            const hexDisplay = document.createElement('div');
+            hexDisplay.className = 'hex-display';
+            hexDisplay.id = format.name + '-hex';
+            
+            const hexInput = document.createElement('input');
+            hexInput.type = 'text';
+            hexInput.placeholder = 'Hex (0x...)';
+            hexInput.style.width = '120px';
+            hexInput.style.padding = '8px';
+            hexInput.style.backgroundColor = '#333';
+            hexInput.style.color = '#e0e0e0';
+            hexInput.style.border = '1px solid #555';
+            hexInput.style.borderRadius = '4px';
+            hexInput.style.fontFamily = 'monospace';
+            hexInput.id = format.name + '-hex-input';
+            hexInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    updateFromHex(format.name, hexInput.value);
+                }
+            });
+            
+            const hexButton = document.createElement('button');
+            hexButton.textContent = 'Set';
+            hexButton.style.padding = '6px 12px';
+            hexButton.style.fontSize = '14px';
+            hexButton.onclick = () => updateFromHex(format.name, hexInput.value);
+            
+            hexContainer.appendChild(hexDisplay);
+            hexContainer.appendChild(hexInput);
+            hexContainer.appendChild(hexButton);
+            section.appendChild(hexContainer);
+            
+            const valueDisplay = document.createElement('div');
+            valueDisplay.className = 'value-display';
+            valueDisplay.id = format.name + '-value';
+            section.appendChild(valueDisplay);
+            
+            return section;
+        }
+        
+        function toggleBit(formatName, bitIndex) {
+            const format = formats.find(f => f.name === formatName);
+            const bits = getCurrentBits(formatName);
+            bits[bitIndex] = 1 - bits[bitIndex];
+            updateFormatDisplay(format, bits);
+            
+            // Update decimal input with the new value
+            const value = bitsToFloat(bits, format);
+            if (!(value && typeof value === 'object' && value.isNaN) && !isNaN(value) && isFinite(value)) {
+                document.getElementById('decimalInput').value = value;
+            }
+        }
+        
+        function getCurrentBits(formatName) {
+            const format = formats.find(f => f.name === formatName);
+            const section = document.getElementById(formatName);
+            const bitElements = section.querySelectorAll('.bit');
+            const bits = [];
+            bitElements.forEach(el => {
+                bits.push(parseInt(el.textContent));
+            });
+            return bits;
+        }
+        
+        function updateFormatDisplay(format, bits) {
+            const section = document.getElementById(format.name);
+            const bitElements = section.querySelectorAll('.bit');
+            
+            bitElements.forEach((el, i) => {
+                el.textContent = bits[i];
+            });
+            
+            const hexDisplay = document.getElementById(format.name + '-hex');
+            hexDisplay.textContent = bitsToHex(bits);
+            
+            // Update hex input field
+            const hexInput = document.getElementById(format.name + '-hex-input');
+            if (hexInput && document.activeElement !== hexInput) {
+                hexInput.value = bitsToHex(bits);
+            }
+            
+            const valueDisplay = document.getElementById(format.name + '-value');
+            const value = bitsToFloat(bits, format);
+            
+            let displayText = '';
+            if (value && typeof value === 'object' && value.isNaN) {
+                const isQuiet = value.quietBit === 1;
+                displayText = `<span class="special-value">${value.signBit ? '-' : '+'}NaN (${isQuiet ? 'quiet' : 'signaling'} NaN)</span>`;
+            } else if (isNaN(value)) {
+                displayText = `<span class="special-value">NaN (Not a Number)</span>`;
+            } else if (!isFinite(value)) {
+                displayText = `<span class="special-value">${value > 0 ? '+' : '-'}Infinity</span>`;
+            } else if (value === 0) {
+                displayText = `
+                    <div class="value-item">
+                        <span class="value-label">Value:</span>
+                        <span class="value-content">${bits[0] ? '-' : '+'}0</span>
+                    </div>
+                `;
+            } else {
+                // Use toPrecision for better display of the value
+                const preciseValue = value.toPrecision(15).replace(/\.?0+$/, '');
+                const exponentialValue = value.toExponential();
+                
+                // Extract components for mathematical representation
+                const sign = bits[0] ? '-1' : '1';
+                let exponentBits = 0;
+                for (let i = 0; i < format.exponent; i++) {
+                    exponentBits = (exponentBits << 1) | bits[format.sign + i];
+                }
+                
+                let actualExponent;
+                let mantissaValue;
+                
+                // Calculate mantissa bits
+                let mantissaBits = 0;
+                if (format.mantissa <= 32) {
+                    for (let i = 0; i < format.mantissa; i++) {
+                        mantissaBits = (mantissaBits << 1) | bits[format.sign + format.exponent + i];
+                    }
+                } else {
+                    for (let i = 0; i < format.mantissa; i++) {
+                        mantissaBits = mantissaBits * 2 + bits[format.sign + format.exponent + i];
+                    }
+                }
+                
+                if (exponentBits === 0) {
+                    // Denormalized number
+                    actualExponent = 1 - format.bias; // This is -126 for float32, not -127
+                    mantissaValue = mantissaBits / Math.pow(2, format.mantissa);
+                } else {
+                    // Normalized number
+                    actualExponent = exponentBits - format.bias;
+                    mantissaValue = 1 + mantissaBits / Math.pow(2, format.mantissa);
+                }
+                
+                const mantissaStr = mantissaValue.toPrecision(6);
+                
+                displayText = `
+                    <div class="value-item">
+                        <span class="value-label">Decimal:</span>
+                        <span class="value-content">${preciseValue}</span>
+                    </div>
+                    <div class="value-item">
+                        <span class="value-label">Exponential:</span>
+                        <span class="value-content">${exponentialValue}</span>
+                    </div>
+                    <div class="value-item">
+                        <span class="value-label">Breakdown:</span>
+                        <span class="value-content">${sign} × 2^${actualExponent} × ${mantissaStr}</span>
+                    </div>
+                `;
+            }
+            
+            valueDisplay.innerHTML = displayText;
+        }
+        
+        function updateAllFormats() {
+            const input = document.getElementById('decimalInput');
+            const value = parseFloat(input.value);
+            
+            formats.forEach(format => {
+                const bits = floatToBits(value, format);
+                updateFormatDisplay(format, bits);
+            });
+        }
+        
+        
+        // Initialize displays
+        const container = document.getElementById('formats');
+        formats.forEach(format => {
+            container.appendChild(createFormatDisplay(format));
+        });
+        
+        // Set initial values
+        updateAllFormats();
+        
+        // Update on input change
+        document.getElementById('decimalInput').addEventListener('input', updateAllFormats);
+    </script>
+</body>
+</html>
